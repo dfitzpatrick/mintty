@@ -415,8 +415,24 @@ set_option(string name, string val_str)
 }
 
 static int
+is_whitespace(string option)
+{
+    while (*option) {
+        if (!isspace((uchar)*option)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+static int
 parse_option(string option)
 {
+  // Don't issue a warning for blank lines, just ignore them.
+  if (is_whitespace(option))
+      return -1;
+
   const char *eq = strchr(option, '=');
   if (!eq) {
     fprintf(stderr, "Ignoring malformed option '%s'.\n", option);
