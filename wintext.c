@@ -17,7 +17,7 @@ enum {
   FONT_WIDE       = 0x04,
   FONT_HIGH       = 0x08,
   FONT_NARROW     = 0x10,
-  FONT_MAXNO      = 0x1F,
+  FONT_MAXNO      = 0x20,
   FONT_SHIFT      = 5
 };
 
