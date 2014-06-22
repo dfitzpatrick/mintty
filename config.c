@@ -12,14 +12,21 @@
 #include <termios.h>
 #include <sys/cygwin.h>
 
+// This is the name of the last seen minttyrc. It is where
+// any changes the user makes will be saved.
 #if CYGWIN_VERSION_API_MINOR >= 222
 static wstring rc_filename = 0;
 #else
 static string rc_filename = 0;
 #endif
 
-const config default_cfg = {
+
+// This is the current configuration, used throughout the program.
+// When the config dialog is displayed, it is copied to new_cfg.
+// These settings establish the defaults.
+config cfg = {
   // Looks
+  .theme_file = "",
   .fg_colour = 0xBFBFBF,
   .bg_colour = 0x000000,
   .cursor_colour = 0xBFBFBF,
@@ -100,7 +107,85 @@ const config default_cfg = {
   }
 };
 
-config cfg, new_cfg;
+typedef struct {
+  // Looks
+  string theme_file;
+  colour *fg_colour;
+  colour *bg_colour;
+  colour *cursor_colour;
+  char *transparency;
+  bool *opaque_when_focused;
+  char *cursor_type;
+  bool *cursor_blinks;
+  // Text
+  font_spec *font;
+  char *font_smoothing;
+  char *bold_as_font;    // 0 = false, 1 = true, -1 = undefined
+  bool *bold_as_colour;
+  bool *allow_blinking;
+  string locale;
+  string charset;
+  // Keys
+  bool *backspace_sends_bs;
+  bool *ctrl_alt_is_altgr;
+  bool *clip_shortcuts;
+  bool *window_shortcuts;
+  bool *switch_shortcuts;
+  bool *zoom_shortcuts;
+  bool *alt_fn_shortcuts;
+  bool *ctrl_shift_shortcuts;
+  // Mouse
+  bool *copy_on_select;
+  bool *copy_as_rtf;
+  bool *clicks_place_cursor;
+  char *right_click_action;
+  bool *clicks_target_app;
+  char *click_target_mod;
+  // Window
+  int *cols;
+  int *rows;
+  int *scrollback_lines;
+  char *scrollbar;
+  char *scroll_mod;
+  bool *pgupdn_scroll;
+  // Terminal
+  string term;
+  string answerback;
+  bool *bell_sound;
+  bool *bell_flash;
+  bool *bell_taskbar;
+  string printer;
+  bool *confirm_exit;
+  // Command line
+  string class;
+  char *hold;
+  string icon;
+  string log;
+  string title;
+  bool *utmp;
+  char *window;
+  int *x;
+  int *y;
+  // "Hidden"
+  string app_id;
+  int *col_spacing;
+  int *row_spacing;
+  string word_chars;
+  colour *ime_cursor_colour;
+  colour *ansi_colours;
+  // Legacy
+  bool *use_system_colours;
+} internal_config;
+
+
+// This is initialised (cfg -> new) in windialog.c when the options dialog
+// is displayed. The reverse operation is performed in this file by the
+// apply_config() method, which is called from ok_handler()./app
+// apply_config() then goes on to call win_reconfig() and termin_reconfig()
+// and save_config() which account for the other uses of this variable (it
+// is compared to cfg to detect changes).
+config new_cfg;
+
 static config file_cfg;
 
 typedef enum {
@@ -119,6 +204,7 @@ static const struct {
 }
 options[] = {
   // Looks
+  {"ThemeFile", OPT_STRING, offcfg(theme_file)},
   {"ForegroundColour", OPT_COLOUR, offcfg(fg_colour)},
   {"BackgroundColour", OPT_COLOUR, offcfg(bg_colour)},
   {"CursorColour", OPT_COLOUR, offcfg(cursor_colour)},
@@ -476,33 +562,171 @@ parse_arg_option(string option)
   check_arg_option(parse_option(option));
 }
 
-void
-load_config(string filename)
+static void
+merge_config(internal_config *src, internal_config *dest)
 {
-  file_opts_num = arg_opts_num = 0;
+    //dest->cols = src->cols;
+}
 
-  delete(rc_filename);
-#if CYGWIN_VERSION_API_MINOR >= 222
-  rc_filename = cygwin_create_path(CCP_POSIX_TO_WIN_W, filename);
-#else
-  rc_filename = strdup(filename);
-#endif
+typedef struct option {
+   char *name;
+   char *value;
+} option;
 
-  FILE *file = fopen(filename, "r");
-  if (file) {
+static option
+internal_parse_option(string line)
+{
+    option opt = {
+        .name = NULL,
+        .value = NULL
+    }; 
+
+    // Don't issue a warning for blank lines, just ignore them.
+    if (is_whitespace(line))
+        return opt;
+
+    const char *eq = strchr(line, '=');
+    if (!eq) {
+        fprintf(stderr, "Ignoring malformed option '%s'.\n", line);
+        return opt;
+    }
+
+    // Skip any leading whitespace.
+    while (isspace((uchar)*line))
+        line++;
+
+    // Grab the name.
+    const char *name_end = eq;
+    while (isspace((uchar)name_end[-1]))
+        name_end--;
+  
+    uint name_len = name_end - line;
+    opt.name = malloc(name_len + 1);
+    strncpy(opt.name, line, name_len);
+    opt.name[name_len] = 0;
+
+    // Grab the value.
+    const char *value_start = eq + 1;
+    while (isspace((uchar)*value_start))
+        value_start++;
+  
+    opt.value = strdup(value_start);
+
+    return opt;
+}
+
+static void
+internal_set_string(const char **str, char *newstr)
+{
+    if (*str) delete(*str);
+    *str = strdup(newstr);
+}
+
+static void
+internal_set_colour(colour *c, char *value)
+{
+    colour newc;
+    if (parse_colour(value, &newc)) {
+        if (!c)
+            c = malloc(sizeof(colour));
+        *c = newc;
+    }
+}
+
+static void
+internal_set_option(internal_config *cfg, option option)
+{
+    if (strcasecmp(option.name, "ThemeFile") == 0) {
+        internal_set_string(&cfg->theme_file, option.value);
+    } else if (strcasecmp(option.name, "ForegroundColour") == 0) {
+        internal_set_colour(cfg->fg_colour, option.value);
+    } else if (strcasecmp(option.name, "BackgroundColour") == 0) {
+        internal_set_colour(cfg->bg_colour, option.value);
+    } else if (strcasecmp(option.name, "CursorColour") == 0) {
+        internal_set_colour(cfg->cursor_colour, option.value);
+    } else if (strcasecmp(option.name, "Transparency") == 0) {
+    } else if (strcasecmp(option.name, "OpaqueWhenFocused") == 0) {
+    } else if (strcasecmp(option.name, "CursorType") == 0) {
+    } else if (strcasecmp(option.name, "CursorBlinks") == 0) {
+    } else if (strcasecmp(option.name, "Font") == 0) {
+        internal_set_string(&cfg->font->name, option.value);
+    } else if (strcasecmp(option.name, "FontIsBold") == 0) {
+    }
+}
+
+
+/*
+ * Loads the settings from FILENAME without without attempting to recurse
+ * down the ThemeFile chain. It is permissible for the file to not exist,
+ * for example the default install does not include /etc/minttyrc and the
+ * user's ~/.minttyrc may not exist. Therefore attempts to load non-existant
+ * files are silently ignored.
+ */
+static internal_config *
+load_one_config(string filename)
+{
+    FILE *file = fopen(filename, "r");
+    if (!file)
+        return NULL;
+
+    internal_config *result = calloc(1, sizeof(*result));
     char line[256];
     while (fgets(line, sizeof line, file)) {
-      line[strcspn(line, "\r\n")] = 0;  /* trim newline */
-      int i = parse_option(line);
-      if (i >= 0)
-        remember_file_option(i);
+        line[strcspn(line, "\r\n")] = 0;  // trim newline
+        option opt = internal_parse_option(line);
+        if (opt.name) {
+            internal_set_option(result, opt);
+            delete(opt.name);
+            delete(opt.value);
+      }
     }
+
     fclose(file);
-  }
-  
-  check_legacy_options(remember_file_option);
-  
-  copy_config(&file_cfg, &cfg);
+    return result;  
+}
+
+/*
+ * Loads the configuration stored in FILENAME. If FILENAME contains a
+ * setting for ThemeFile, then that file is loaded first, then the settings
+ * of FILENAME are applied on top. This allows a chain of settings files
+ * to be established with the settings in the later files in the chain
+ * having precedence.
+ */
+internal_config *
+internal_load_config(string filename)
+{
+    internal_config *result = calloc(1, sizeof(*result));
+    internal_config *this_cfg = load_one_config(filename);
+    if (this_cfg && this_cfg->theme_file) {
+        string fname = asform("/etc/mintty.d/themes/%s", this_cfg->theme_file);
+        internal_config *theme = internal_load_config(fname);
+        if (theme) {
+            merge_config(theme, result);
+            delete(theme);
+        }
+        delete(fname);
+    }
+    merge_config(this_cfg, result);
+    delete(this_cfg);
+    return result;
+}
+
+void
+load_config(string filename, bool remember_filename_for_saving)
+{
+    if (remember_filename_for_saving) {
+        delete(rc_filename);
+#if CYGWIN_VERSION_API_MINOR >= 222
+        rc_filename = cygwin_create_path(CCP_POSIX_TO_WIN_W, filename);
+#else
+        rc_filename = strdup(filename);
+#endif
+    }
+
+    internal_config *internal_cfg = internal_load_config(filename);
+    //check_legacy_options(cfg);
+    //copy_internal_config_to_config(internal_cfg, &cfg);
+    free(internal_cfg);
 }
 
 void
@@ -527,12 +751,6 @@ copy_config(config *dst_p, const config *src_p)
 }
 
 void
-init_config(void)
-{
-  copy_config(&cfg, &default_cfg);
-}
-
-void
 finish_config(void)
 {
   // Avoid negative sizes.
@@ -541,6 +759,7 @@ finish_config(void)
   cfg.scrollback_lines = max(0, cfg.scrollback_lines);
   
   // Ignore charset setting if we haven't got a locale.
+  // TODO this dumps core.
   if (!*cfg.locale)
     strset(&cfg.charset, "");
   

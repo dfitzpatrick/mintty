@@ -740,7 +740,6 @@ main(int argc, char *argv[])
 {
   main_argv = argv;
   load_dwm_funcs();
-  init_config();
   cs_init();
   
   // Determine home directory.
@@ -761,9 +760,9 @@ main(int argc, char *argv[])
   cfg.window = sui.dwFlags & STARTF_USESHOWWINDOW ? sui.wShowWindow : SW_SHOW;
   cfg.x = cfg.y = CW_USEDEFAULT;
   
-  load_config("/etc/minttyrc");
+  load_config("/etc/minttyrc", false);
   string rc_file = asform("%s/.minttyrc", home);
-  load_config(rc_file);
+  load_config(rc_file, true);
   delete(rc_file);
 
   for (;;) {
@@ -772,7 +771,7 @@ main(int argc, char *argv[])
       break;
     char *longopt = argv[optind - 1], *shortopt = (char[]){'-', optopt, 0};
     switch (opt) {
-      when 'c': load_config(optarg);
+      when 'c': load_config(optarg, true);
       when 'h': set_arg_option("Hold", optarg);
       when 'i': set_arg_option("Icon", optarg);
       when 'l': set_arg_option("Log", optarg);

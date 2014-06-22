@@ -41,6 +41,7 @@ typedef struct {
 
 typedef struct {
   // Looks
+  string theme_file;
   colour fg_colour, bg_colour, cursor_colour;
   char transparency;
   bool opaque_when_focused;
@@ -105,8 +106,7 @@ typedef struct {
 
 extern config cfg, new_cfg;
 
-void init_config(void);
-void load_config(string filename);
+void load_config(string filename, bool remember_filename_for_saving);
 void set_arg_option(string name, string val);
 void parse_arg_option(string);
 void remember_arg(string);

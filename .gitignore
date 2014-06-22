@@ -2,3 +2,6 @@
 *.d
 *.exe
 TAGS
+pd.txt
+*.stackdump
+

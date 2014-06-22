@@ -9,6 +9,7 @@ strset(string *sp, string s)
   *sp = memcpy(renewn((char *)*sp, size), s, size);
 }
 
+
 #if CYGWIN_VERSION_API_MINOR < 70
 
 int
