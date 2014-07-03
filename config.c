@@ -654,6 +654,20 @@ internal_set_option(internal_config *cfg, option option)
     }
 }
 
+static internal_config *
+make_config(void)
+{
+    internal_config *cfg = calloc(1, sizeof(*cfg));
+    cfg->font = calloc(1, sizeof(*(cfg->font)));
+    return cfg;
+}
+
+static void
+free_config(internal_config *cfg)
+{
+    free(cfg->font);
+    free(cfg);
+}
 
 /*
  * Loads the settings from FILENAME without without attempting to recurse
@@ -669,7 +683,7 @@ load_one_config(string filename)
     if (!file)
         return NULL;
 
-    internal_config *result = calloc(1, sizeof(*result));
+    internal_config *result = make_config();
     char line[256];
     while (fgets(line, sizeof line, file)) {
         line[strcspn(line, "\r\n")] = 0;  // trim newline
@@ -695,7 +709,7 @@ load_one_config(string filename)
 internal_config *
 internal_load_config(string filename)
 {
-    internal_config *result = calloc(1, sizeof(*result));
+    internal_config *result = make_config();
     internal_config *this_cfg = load_one_config(filename);
     if (this_cfg && this_cfg->theme_file) {
         string fname = asform("/etc/mintty.d/themes/%s", this_cfg->theme_file);
