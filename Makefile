@@ -73,7 +73,7 @@ LDFLAGS := -L$(shell $(CC) -print-file-name=w32api) -static-libgcc
 LDLIBS := -mwindows -lcomctl32 -limm32 -lwinspool -lole32 -luuid
 
 ifdef DEBUG
-  CFLAGS += -g
+  CFLAGS += -g -DDEBUG=1
 else
   CPPFLAGS += -DNDEBUG
   CFLAGS += -fomit-frame-pointer -O2
@@ -123,7 +123,7 @@ $(pdf): docs/$(NAME).1
 	groff -t -man -Tps $< | ps2pdf - $@
 
 clean:
-	rm -rf *.d *.o $(NAME)*
+	rm -rf *.d *.o $(NAME)* *.stackdump
 
 %.o: %.c
 	$(CC) -c -MMD -MP $(CPPFLAGS) $(CFLAGS) $<
