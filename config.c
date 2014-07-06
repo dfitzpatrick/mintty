@@ -8,6 +8,7 @@
 #include "print.h"
 #include "charset.h"
 #include "win.h"
+#include "uthash.h"
 
 #include <termios.h>
 #include <sys/cygwin.h>
@@ -20,11 +21,13 @@ static wstring rc_filename = 0;
 static string rc_filename = 0;
 #endif
 
+#ifdef DEBUG
+#define DUMP(...) fprintf(stderr, __VA_ARGS__)
+#else
+#define DUMP(...) { }
+#endif
 
-// This is the current configuration, used throughout the program.
-// When the config dialog is displayed, it is copied to new_cfg.
-// These settings establish the defaults.
-config cfg = {
+const config default_cfg = {
   // Looks
   .theme_file = "",
   .fg_colour = 0xBFBFBF,
@@ -107,76 +110,8 @@ config cfg = {
   }
 };
 
-typedef struct {
-  // Looks
-  string theme_file;
-  colour *fg_colour;
-  colour *bg_colour;
-  colour *cursor_colour;
-  char *transparency;
-  bool *opaque_when_focused;
-  char *cursor_type;
-  bool *cursor_blinks;
-  // Text
-  font_spec *font;
-  char *font_smoothing;
-  char *bold_as_font;    // 0 = false, 1 = true, -1 = undefined
-  bool *bold_as_colour;
-  bool *allow_blinking;
-  string locale;
-  string charset;
-  // Keys
-  bool *backspace_sends_bs;
-  bool *ctrl_alt_is_altgr;
-  bool *clip_shortcuts;
-  bool *window_shortcuts;
-  bool *switch_shortcuts;
-  bool *zoom_shortcuts;
-  bool *alt_fn_shortcuts;
-  bool *ctrl_shift_shortcuts;
-  // Mouse
-  bool *copy_on_select;
-  bool *copy_as_rtf;
-  bool *clicks_place_cursor;
-  char *right_click_action;
-  bool *clicks_target_app;
-  char *click_target_mod;
-  // Window
-  int *cols;
-  int *rows;
-  int *scrollback_lines;
-  char *scrollbar;
-  char *scroll_mod;
-  bool *pgupdn_scroll;
-  // Terminal
-  string term;
-  string answerback;
-  bool *bell_sound;
-  bool *bell_flash;
-  bool *bell_taskbar;
-  string printer;
-  bool *confirm_exit;
-  // Command line
-  string class;
-  char *hold;
-  string icon;
-  string log;
-  string title;
-  bool *utmp;
-  char *window;
-  int *x;
-  int *y;
-  // "Hidden"
-  string app_id;
-  int *col_spacing;
-  int *row_spacing;
-  string word_chars;
-  colour *ime_cursor_colour;
-  colour *ansi_colours;
-  // Legacy
-  bool *use_system_colours;
-} internal_config;
-
+// This is the main config structure used throughout the program.
+config cfg;
 
 // This is initialised (cfg -> new) in windialog.c when the options dialog
 // is displayed. The reverse operation is performed in this file by the
@@ -204,10 +139,10 @@ static const struct {
 }
 options[] = {
   // Looks
-  {"ThemeFile", OPT_STRING, offcfg(theme_file)},
   {"ForegroundColour", OPT_COLOUR, offcfg(fg_colour)},
   {"BackgroundColour", OPT_COLOUR, offcfg(bg_colour)},
   {"CursorColour", OPT_COLOUR, offcfg(cursor_colour)},
+  {"ThemeFile", OPT_STRING, offcfg(theme_file)},
   {"Transparency", OPT_TRANS, offcfg(transparency)},
   {"OpaqueWhenFocused", OPT_BOOL, offcfg(opaque_when_focused)},
   {"CursorType", OPT_CURSOR, offcfg(cursor_type)},
@@ -495,12 +430,11 @@ set_option(string name, string val_str)
       }
     }
   }
-  fprintf(stderr, "Ignoring invalid value '%s' for option '%s'.\n",
-                  val_str, name);
+  fprintf(stderr, "Ignoring invalid value '%s' for option '%s'.\n", val_str, name);
   return -1;
 }
 
-static int
+static bool 
 is_whitespace(string option)
 {
     while (*option) {
@@ -562,33 +496,55 @@ parse_arg_option(string option)
   check_arg_option(parse_option(option));
 }
 
-static void
-merge_config(internal_config *src, internal_config *dest)
-{
-    //dest->cols = src->cols;
-}
-
-typedef struct option {
+// Represents one option read from one line in the config file.
+typedef struct Option {
    char *name;
    char *value;
-} option;
+   bool remember;
+   UT_hash_handle hh;
+} Option;
 
-static option
-internal_parse_option(string line)
+static Option *
+new_option()
 {
-    option opt = {
-        .name = NULL,
-        .value = NULL
-    }; 
+    Option *opt = calloc(1, sizeof(*opt));
+    return opt;
+}
 
+static void
+free_option(Option *opt)
+{
+    free(opt->name);
+    free(opt->value);
+    free(opt);
+}
+
+/*
+ * Frees the hash table in HASH_TABLE, calling free_option on each of its
+ * elements.
+ */
+static void
+free_option_hash(Option **hash_table)
+{
+    Option *cur, *tmp;
+    HASH_ITER(hh, *hash_table, cur, tmp) {
+        HASH_DEL(*hash_table, cur);
+        free_option(cur);
+    }
+    *hash_table = NULL;
+}
+
+static Option *
+parse_option2(string line)
+{
     // Don't issue a warning for blank lines, just ignore them.
     if (is_whitespace(line))
-        return opt;
+        return NULL;
 
     const char *eq = strchr(line, '=');
     if (!eq) {
         fprintf(stderr, "Ignoring malformed option '%s'.\n", line);
-        return opt;
+        return NULL;
     }
 
     // Skip any leading whitespace.
@@ -599,74 +555,48 @@ internal_parse_option(string line)
     const char *name_end = eq;
     while (isspace((uchar)name_end[-1]))
         name_end--;
-  
+ 
+    Option *opt = new_option();
     uint name_len = name_end - line;
-    opt.name = malloc(name_len + 1);
-    strncpy(opt.name, line, name_len);
-    opt.name[name_len] = 0;
+    opt->name = malloc(name_len + 1);
+    strncpy(opt->name, line, name_len);
+    opt->name[name_len] = 0;
 
-    // Grab the value.
+    // Grab the value, trimming any trailing whitespace.
     const char *value_start = eq + 1;
     while (isspace((uchar)*value_start))
         value_start++;
-  
-    opt.value = strdup(value_start);
+    const char *value_end = strchr(value_start, 0);
+    while (isspace((uchar)value_end[-1]))
+        value_end--;
+    uint value_len = value_end - value_start;
+    opt->value = malloc(value_len + 1);
+    strncpy(opt->value, value_start, value_len);
+    opt->value[value_len] = 0;
 
     return opt;
 }
 
+/*
+ * Merge values in PARENT (which is a UTHASH) into CHILD (another UTHASH).
+ * In the case of an option being in both hashes, the value in the CHILD wins.
+ */
 static void
-internal_set_string(const char **str, char *newstr)
+merge_config(Option **parent, Option **child)
 {
-    if (*str) delete(*str);
-    *str = strdup(newstr);
-}
-
-static void
-internal_set_colour(colour *c, char *value)
-{
-    colour newc;
-    if (parse_colour(value, &newc)) {
-        if (!c)
-            c = malloc(sizeof(colour));
-        *c = newc;
+    Option *next;
+    for (Option *opt = *parent; opt != NULL; opt = next) {
+        // Store this ptr in case we free.
+        next = opt->hh.next;
+        Option *child_value;
+        HASH_FIND_STR(*child, opt->name, child_value);
+        if (!child_value) {
+            // This just moves the opt ptr from one hash to another, so
+            // no freeing is necessary.
+            HASH_DEL(*parent, opt);
+            HASH_ADD_KEYPTR(hh, *child, opt->name, strlen(opt->name), opt);
+        }
     }
-}
-
-static void
-internal_set_option(internal_config *cfg, option option)
-{
-    if (strcasecmp(option.name, "ThemeFile") == 0) {
-        internal_set_string(&cfg->theme_file, option.value);
-    } else if (strcasecmp(option.name, "ForegroundColour") == 0) {
-        internal_set_colour(cfg->fg_colour, option.value);
-    } else if (strcasecmp(option.name, "BackgroundColour") == 0) {
-        internal_set_colour(cfg->bg_colour, option.value);
-    } else if (strcasecmp(option.name, "CursorColour") == 0) {
-        internal_set_colour(cfg->cursor_colour, option.value);
-    } else if (strcasecmp(option.name, "Transparency") == 0) {
-    } else if (strcasecmp(option.name, "OpaqueWhenFocused") == 0) {
-    } else if (strcasecmp(option.name, "CursorType") == 0) {
-    } else if (strcasecmp(option.name, "CursorBlinks") == 0) {
-    } else if (strcasecmp(option.name, "Font") == 0) {
-        internal_set_string(&cfg->font->name, option.value);
-    } else if (strcasecmp(option.name, "FontIsBold") == 0) {
-    }
-}
-
-static internal_config *
-make_config(void)
-{
-    internal_config *cfg = calloc(1, sizeof(*cfg));
-    cfg->font = calloc(1, sizeof(*(cfg->font)));
-    return cfg;
-}
-
-static void
-free_config(internal_config *cfg)
-{
-    free(cfg->font);
-    free(cfg);
 }
 
 /*
@@ -676,27 +606,37 @@ free_config(internal_config *cfg)
  * user's ~/.minttyrc may not exist. Therefore attempts to load non-existant
  * files are silently ignored.
  */
-static internal_config *
-load_one_config(string filename)
+static Option *
+load_one_config(string filename, bool remember)
 {
     FILE *file = fopen(filename, "r");
-    if (!file)
+    if (!file) {
         return NULL;
+    }
 
-    internal_config *result = make_config();
+    Option *option_table = NULL;
     char line[256];
     while (fgets(line, sizeof line, file)) {
         line[strcspn(line, "\r\n")] = 0;  // trim newline
-        option opt = internal_parse_option(line);
-        if (opt.name) {
-            internal_set_option(result, opt);
-            delete(opt.name);
-            delete(opt.value);
+        Option *opt = parse_option2(line);
+        if (opt) {
+            DUMP("Config file %s: Got %s = %s.\n", filename, opt->name, opt->value);
+            opt->remember = remember;
+            Option *lookup;
+            HASH_FIND_STR(option_table, opt->name, lookup);
+            if (lookup) {
+                fprintf(stderr, "The option %s is specified twice in file %s. "
+                        "The later value overrides the earlier one.\n",
+                        opt->name, filename);
+                HASH_DEL(option_table, lookup);
+                free_option(lookup);
+            }
+            HASH_ADD_KEYPTR(hh, option_table, opt->name, strlen(opt->name), opt);
       }
     }
 
     fclose(file);
-    return result;  
+    return option_table;  
 }
 
 /*
@@ -705,30 +645,35 @@ load_one_config(string filename)
  * of FILENAME are applied on top. This allows a chain of settings files
  * to be established with the settings in the later files in the chain
  * having precedence.
+ * Returns: a hash table of Options.
  */
-internal_config *
-internal_load_config(string filename)
+static Option *
+load_config_recursive(string filename, bool remember)
 {
-    internal_config *result = make_config();
-    internal_config *this_cfg = load_one_config(filename);
-    if (this_cfg && this_cfg->theme_file) {
-        string fname = asform("/etc/mintty.d/themes/%s", this_cfg->theme_file);
-        internal_config *theme = internal_load_config(fname);
-        if (theme) {
-            merge_config(theme, result);
-            delete(theme);
+    Option *this_cfg = load_one_config(filename, remember);
+    if (this_cfg) {
+        Option *theme_option;
+        HASH_FIND_STR(this_cfg, "ThemeFile", theme_option);
+        if (theme_option) {
+            string fname = asform("/etc/mintty.d/themes/%s", theme_option->value);
+            Option *theme_config = load_config_recursive(fname, false);
+            if (theme_config) {
+                merge_config(&theme_config, &this_cfg);
+                free_option_hash(&theme_config);
+            }
+            delete(fname);
         }
-        delete(fname);
     }
-    merge_config(this_cfg, result);
-    delete(this_cfg);
-    return result;
+
+    return this_cfg;
 }
 
 void
-load_config(string filename, bool remember_filename_for_saving)
+load_config(string filename, bool remember)
 {
-    if (remember_filename_for_saving) {
+    if (remember) {
+        file_opts_num = arg_opts_num = 0;
+
         delete(rc_filename);
 #if CYGWIN_VERSION_API_MINOR >= 222
         rc_filename = cygwin_create_path(CCP_POSIX_TO_WIN_W, filename);
@@ -737,10 +682,19 @@ load_config(string filename, bool remember_filename_for_saving)
 #endif
     }
 
-    internal_config *internal_cfg = internal_load_config(filename);
-    //check_legacy_options(cfg);
-    //copy_internal_config_to_config(internal_cfg, &cfg);
-    free(internal_cfg);
+    Option *options = load_config_recursive(filename, remember);
+
+    for (Option *i = options; i != NULL; i = i->hh.next) {
+        DUMP("%s = %s, remember = %i\n", i->name, i->value, i->remember);
+        set_option(i->name, i->value);
+        if (i->remember) {
+            int idx = find_option(i->name);
+            remember_file_option(idx);
+        }
+    }
+    free_option_hash(&options);
+    check_legacy_options(remember_file_option);
+    copy_config(&file_cfg, &cfg);
 }
 
 void
@@ -762,6 +716,12 @@ copy_config(config *dst_p, const config *src_p)
       }
     }
   }
+}
+
+void
+init_config(void)
+{
+    copy_config(&cfg, &default_cfg);
 }
 
 void

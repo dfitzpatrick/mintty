@@ -40,9 +40,9 @@ typedef struct {
 // Configuration data.
 
 typedef struct {
-  // Looks
-  string theme_file;
+  // Looks. n.b. There is code that assumes these items are first.
   colour fg_colour, bg_colour, cursor_colour;
+  string theme_file;
   char transparency;
   bool opaque_when_focused;
   char cursor_type;
@@ -106,6 +106,7 @@ typedef struct {
 
 extern config cfg, new_cfg;
 
+void init_config(void);
 void load_config(string filename, bool remember_filename_for_saving);
 void set_arg_option(string name, string val);
 void parse_arg_option(string);

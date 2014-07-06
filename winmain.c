@@ -740,6 +740,7 @@ main(int argc, char *argv[])
 {
   main_argv = argv;
   load_dwm_funcs();
+  init_config();
   cs_init();
   
   // Determine home directory.
