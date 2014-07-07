@@ -997,6 +997,20 @@ term_handler(control *ctrl, int event)
   }
 }
 
+static void
+theme_handler(control *ctrl, int event)
+{
+  switch (event) {
+    when EVENT_REFRESH:
+      dlg_listbox_clear(ctrl);
+      dlg_listbox_add(ctrl, "Sol Dark");
+      dlg_listbox_add(ctrl, "Sol Light");
+      dlg_editbox_set(ctrl, new_cfg.theme_file);
+    when EVENT_VALCHANGE or EVENT_SELCHANGE:
+      dlg_editbox_get(ctrl, &new_cfg.theme_file);
+  }
+}
+
 void
 setup_config_box(controlbox * b)
 {
@@ -1034,6 +1048,7 @@ setup_config_box(controlbox * b)
   ctrl_pushbutton(
     s, "&Cursor...", dlg_stdcolour_handler, &new_cfg.cursor_colour
   )->column = 2;
+  ctrl_combobox(s, "&Theme", 66, theme_handler, 0);
   
   s = ctrl_new_set(b, "Looks", "Transparency");
   bool with_glass = win_is_glass_available();

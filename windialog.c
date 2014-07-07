@@ -81,7 +81,7 @@ create_controls(HWND wnd, char *path)
    /*
     * Here we must create the basic standard controls.
     */
-    ctrlposinit(&cp, wnd, 3, 3, 135);
+    ctrlposinit(&cp, wnd, 3, 3, 148);
     wc = &ctrls_base;
     base_id = IDCX_STDBASE;
   }
@@ -133,7 +133,7 @@ config_dialog_proc(HWND wnd, UINT msg, WPARAM wParam, LPARAM lParam)
       r.left = 3;
       r.right = r.left + 64;
       r.top = 3;
-      r.bottom = r.top + 126;
+      r.bottom = r.top + 136;
       MapDialogRect(wnd, &r);
       HWND treeview =
         CreateWindowEx(WS_EX_CLIENTEDGE, WC_TREEVIEW, "",
