@@ -6,6 +6,7 @@
 #include "winctrls.h"
 
 #include "winpriv.h"
+#include "dirent.h"
 
 #define _RPCNDR_H
 #define _WTYPES_H
@@ -1067,6 +1068,14 @@ dlg_editbox_set(control *ctrl, string text)
   winctrl *c = ctrl->plat_ctrl;
   assert(c && c->ctrl->type == CTRL_EDITBOX);
   SetDlgItemText(dlg.wnd, c->base_id + 1, text);
+}
+
+void
+dlg_listbox_set(control *ctrl, string text)
+{
+    winctrl *c = ctrl->plat_ctrl;
+//    int index = SendDlgItemMessage(dlg.wnd, c->base_id + 1, CB_FINDSTRINGEXACT, -1, text);
+//    int len = SendDlgItemMessage(dlg.wnd, c->base_id + 1, CB_GETLBTEXTLEN, index, 0);
 }
 
 void

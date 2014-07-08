@@ -27,6 +27,7 @@ static inline uchar red(colour c) { return c; }
 static inline uchar green(colour c) { return c >> 8; }
 static inline uchar blue(colour c) { return c >> 16; }
 
+const char *THEME_DIR;
 
 // Font properties.
 

@@ -9,6 +9,7 @@
 #include "charset.h"
 #include "win.h"
 #include "uthash.h"
+#include <dirent.h>
 
 #include <termios.h>
 #include <sys/cygwin.h>
@@ -26,6 +27,8 @@ static string rc_filename = 0;
 #else
 #define DUMP(...) { }
 #endif
+
+const char *THEME_DIR = "/usr/share/mintty.d/themes";
 
 const config default_cfg = {
   // Looks
@@ -620,12 +623,12 @@ load_one_config(string filename, bool remember)
         line[strcspn(line, "\r\n")] = 0;  // trim newline
         Option *opt = parse_option2(line);
         if (opt) {
-            DUMP("Config file %s: Got %s = %s.\n", filename, opt->name, opt->value);
+            DUMP("Config '%s': Got %s = %s.\n", filename, opt->name, opt->value);
             opt->remember = remember;
             Option *lookup;
             HASH_FIND_STR(option_table, opt->name, lookup);
             if (lookup) {
-                fprintf(stderr, "The option %s is specified twice in file %s. "
+                fprintf(stderr, "The option '%s' is specified twice in file '%s'. "
                         "The later value overrides the earlier one.\n",
                         opt->name, filename);
                 HASH_DEL(option_table, lookup);
@@ -655,7 +658,7 @@ load_config_recursive(string filename, bool remember)
         Option *theme_option;
         HASH_FIND_STR(this_cfg, "ThemeFile", theme_option);
         if (theme_option) {
-            string fname = asform("/etc/mintty.d/themes/%s", theme_option->value);
+            string fname = asform("%s/%s", THEME_DIR, theme_option->value);
             Option *theme_config = load_config_recursive(fname, false);
             if (theme_config) {
                 merge_config(&theme_config, &this_cfg);
@@ -1004,8 +1007,6 @@ theme_handler(control *ctrl, int event)
     when EVENT_REFRESH:
       dlg_listbox_clear(ctrl);
       dlg_listbox_add(ctrl, "Sol Dark");
-      dlg_listbox_add(ctrl, "Sol Light");
-      dlg_editbox_set(ctrl, new_cfg.theme_file);
     when EVENT_VALCHANGE or EVENT_SELCHANGE:
       dlg_editbox_get(ctrl, &new_cfg.theme_file);
   }
@@ -1048,7 +1049,7 @@ setup_config_box(controlbox * b)
   ctrl_pushbutton(
     s, "&Cursor...", dlg_stdcolour_handler, &new_cfg.cursor_colour
   )->column = 2;
-  ctrl_combobox(s, "&Theme", 66, theme_handler, 0);
+  ctrl_listbox(s, "&Theme", 66, theme_handler, 0);
   
   s = ctrl_new_set(b, "Looks", "Transparency");
   bool with_glass = win_is_glass_available();

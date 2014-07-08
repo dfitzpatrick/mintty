@@ -314,7 +314,8 @@ control *ctrl_fontsel(controlset *, char *label,
                       handler_fn handler, void *context);
 control *ctrl_checkbox(controlset *, char *label,
                        handler_fn handler, void *context);
-
+control *ctrl_listbox(controlset *, char *label, int percentage,
+                      handler_fn handler, void *context);
 /*
  * Standard handler routines to cover most of the common cases in
  * the config box.
