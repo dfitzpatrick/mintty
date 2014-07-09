@@ -1020,7 +1020,7 @@ theme_handler(control *ctrl, int event)
           free(themelist[i]);
         }
       }
-
+      dlg_listbox_set(ctrl, new_cfg.theme_file);
     when EVENT_VALCHANGE or EVENT_SELCHANGE:
       dlg_editbox_get(ctrl, &new_cfg.theme_file);
   }

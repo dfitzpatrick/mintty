@@ -1074,8 +1074,12 @@ void
 dlg_listbox_set(control *ctrl, string text)
 {
     winctrl *c = ctrl->plat_ctrl;
-//    int index = SendDlgItemMessage(dlg.wnd, c->base_id + 1, CB_FINDSTRINGEXACT, -1, text);
-//    int len = SendDlgItemMessage(dlg.wnd, c->base_id + 1, CB_GETLBTEXTLEN, index, 0);
+    assert(c && c->ctrl->type == CTRL_LISTBOX);
+    int index = SendDlgItemMessage(dlg.wnd, c->base_id + 1, CB_FINDSTRINGEXACT,
+                                   -1, (LPARAM)text);
+    if (index != CB_ERR) {
+      SendDlgItemMessage(dlg.wnd, c->base_id + 1, CB_SETCURSEL, index, 0);
+    }
 }
 
 void
