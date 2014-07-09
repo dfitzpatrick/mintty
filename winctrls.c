@@ -1082,7 +1082,7 @@ void
 dlg_editbox_get(control *ctrl, string *text_p)
 {
   winctrl *c = ctrl->plat_ctrl;
-  assert(c && c->ctrl->type == CTRL_EDITBOX);
+  assert(c && (c->ctrl->type == CTRL_EDITBOX || c->ctrl->type == CTRL_LISTBOX));
   HWND wnd = GetDlgItem(dlg.wnd, c->base_id + 1);
   int size = GetWindowTextLength(wnd) + 1;
   char *text = (char *)*text_p;

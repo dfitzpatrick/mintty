@@ -1009,8 +1009,8 @@ theme_handler(control *ctrl, int event)
       dlg_listbox_add(ctrl, "Sol Dark");
       dlg_listbox_add(ctrl, "Sol Light");
       dlg_listbox_add(ctrl, "Phil");
-  //  when EVENT_VALCHANGE or EVENT_SELCHANGE:
-      //dlg_editbox_get(ctrl, &new_cfg.theme_file);
+    when EVENT_VALCHANGE or EVENT_SELCHANGE:
+      dlg_editbox_get(ctrl, &new_cfg.theme_file);
   }
 }
 
