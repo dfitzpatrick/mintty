@@ -1006,9 +1006,21 @@ theme_handler(control *ctrl, int event)
   switch (event) {
     when EVENT_REFRESH:
       dlg_listbox_clear(ctrl);
-      dlg_listbox_add(ctrl, "Sol Dark");
-      dlg_listbox_add(ctrl, "Sol Light");
-      dlg_listbox_add(ctrl, "Phil");
+     
+      struct dirent **themelist;
+      int n;
+      n = scandir(THEME_DIR, &themelist, 0, alphasort);
+      if (n < 0) {
+      } else {
+        for (int i = 0; i < n; i++) {
+          char *t = themelist[i]->d_name;
+          if (!((strcmp(t, ".") == 0 || strcmp(t, "..") == 0))) {
+            dlg_listbox_add(ctrl, themelist[i]->d_name);
+          }
+          free(themelist[i]);
+        }
+      }
+
     when EVENT_VALCHANGE or EVENT_SELCHANGE:
       dlg_editbox_get(ctrl, &new_cfg.theme_file);
   }
