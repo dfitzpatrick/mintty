@@ -1112,11 +1112,10 @@ dlg_listbox_add(control *ctrl, string text)
   winctrl *c = ctrl->plat_ctrl;
   int msg;
   assert(c &&
-         (c->ctrl->type == CTRL_LISTBOX ||
-          (c->ctrl->type == CTRL_EDITBOX &&
-           c->ctrl->editbox.has_list)));
-  msg = (c->ctrl->type == CTRL_LISTBOX &&
-         c->ctrl->listbox.height != 0 ? LB_ADDSTRING : CB_ADDSTRING);
+         (c->ctrl->type == CTRL_LISTBOX || (c->ctrl->type == CTRL_EDITBOX && c->ctrl->editbox.has_list)));
+
+  msg = (c->ctrl->type == CTRL_LISTBOX && c->ctrl->listbox.height != 0 ? LB_ADDSTRING : CB_ADDSTRING);
+
   SendDlgItemMessage(dlg.wnd, c->base_id + 1, msg, 0, (LPARAM) text);
 }
 

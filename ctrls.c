@@ -251,7 +251,8 @@ ctrl_listbox(controlset *s, char *label, int percentage,
   control *c = ctrl_new(s, CTRL_LISTBOX, handler, context);
   c->label = label ? strdup(label) : null;
   c->listbox.percentwidth = percentage;
-  c->listbox.height = 0;;
+  c->listbox.height = 0;
+  c->listbox.ncols = 1;
   return c;
 }
 
