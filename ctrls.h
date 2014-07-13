@@ -341,6 +341,7 @@ void dlg_editbox_get(control *, string *);
 /* The `listbox' functions also apply to combo boxes. */
 void dlg_listbox_clear(control *);
 void dlg_listbox_add(control *, string);
+void dlg_listbox_set(control *, string);
 void dlg_fontsel_set(control *, font_spec *);
 void dlg_fontsel_get(control *, font_spec *);
 /*

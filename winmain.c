@@ -444,7 +444,7 @@ win_update_scrollbar(void)
 void
 win_reconfig(void)
 {
- /* Pass new config data to the terminal */
+  /* Pass new config data to the terminal */
   term_reconfig();
   
   bool font_changed =

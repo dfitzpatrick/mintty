@@ -9,6 +9,7 @@
 #include "charset.h"
 #include "win.h"
 #include "uthash.h"
+#include "child.h"
 #include <dirent.h>
 
 #include <termios.h>
@@ -119,7 +120,7 @@ config cfg;
 // This is initialised (cfg -> new) in windialog.c when the options dialog
 // is displayed. The reverse operation is performed in this file by the
 // apply_config() method, which is called from ok_handler()./app
-// apply_config() then goes on to call win_reconfig() and termin_reconfig()
+// apply_config() then goes on to call win_reconfig() and term_reconfig()
 // and save_config() which account for the other uses of this variable (it
 // is compared to cfg to detect changes).
 config new_cfg;
@@ -699,6 +700,16 @@ load_config(string filename, bool remember)
     check_legacy_options(remember_file_option);
     copy_config(&file_cfg, &cfg);
 }
+
+void
+load_all_config()
+{
+    load_config("/usr/share/mintty.d/minttyrc", false);
+    string rc_file = asform("%s/.minttyrc", home);
+    load_config(rc_file, true);
+    delete(rc_file);
+}
+
 
 void
 copy_config(config *dst_p, const config *src_p)
