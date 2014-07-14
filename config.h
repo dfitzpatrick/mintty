@@ -109,6 +109,7 @@ extern config cfg, new_cfg;
 
 void init_config(void);
 void load_config(string filename, bool remember_filename_for_saving);
+void load_all_config(void);
 void set_arg_option(string name, string val);
 void parse_arg_option(string);
 void remember_arg(string);

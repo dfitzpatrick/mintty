@@ -442,30 +442,16 @@ win_update_scrollbar(void)
 }
 
 void
-win_reconfig(void)
+win_reconfig(bool font_changed)
 {
   /* Pass new config data to the terminal */
   term_reconfig();
   
-  bool font_changed =
-    strcmp(new_cfg.font.name, cfg.font.name) ||    
-    new_cfg.font.size != cfg.font.size ||
-    new_cfg.font.isbold != cfg.font.isbold ||
-    new_cfg.bold_as_font != cfg.bold_as_font ||
-    new_cfg.bold_as_colour != cfg.bold_as_colour ||
-    new_cfg.font_smoothing != cfg.font_smoothing;
-  
-  if (new_cfg.fg_colour != cfg.fg_colour)
-    win_set_colour(FG_COLOUR_I, new_cfg.fg_colour);
-  
-  if (new_cfg.bg_colour != cfg.bg_colour)
-    win_set_colour(BG_COLOUR_I, new_cfg.bg_colour);
-  
-  if (new_cfg.cursor_colour != cfg.cursor_colour)
-    win_set_colour(CURSOR_COLOUR_I, new_cfg.cursor_colour);
+  win_set_colour(FG_COLOUR_I, cfg.fg_colour);
+  win_set_colour(BG_COLOUR_I, cfg.bg_colour);
+  win_set_colour(CURSOR_COLOUR_I, cfg.cursor_colour);
   
   /* Copy the new config and refresh everything */
-  copy_config(&cfg, &new_cfg);
   if (font_changed) {
     win_init_fonts(cfg.font.size);
     win_adapt_term_size();
@@ -760,11 +746,8 @@ main(int argc, char *argv[])
   GetStartupInfo(&sui);
   cfg.window = sui.dwFlags & STARTF_USESHOWWINDOW ? sui.wShowWindow : SW_SHOW;
   cfg.x = cfg.y = CW_USEDEFAULT;
-  
-  load_config("/etc/minttyrc", false);
-  string rc_file = asform("%s/.minttyrc", home);
-  load_config(rc_file, true);
-  delete(rc_file);
+
+  load_all_config();
 
   for (;;) {
     int opt = getopt_long(argc, argv, short_opts, opts, 0);

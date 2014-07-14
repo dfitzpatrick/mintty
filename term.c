@@ -189,17 +189,13 @@ term_flip_screen(void)
 void
 term_reconfig(void)
 {
-  if (!*new_cfg.printer)
+  if (!*cfg.printer)
     term_print_finish();
-  if (new_cfg.allow_blinking != cfg.allow_blinking)
-    term.blink_is_real = new_cfg.allow_blinking;
-  cfg.cursor_blinks = new_cfg.cursor_blinks;
+  term.blink_is_real = cfg.allow_blinking;
   term_schedule_tblink();
   term_schedule_cblink();
-  if (new_cfg.backspace_sends_bs != cfg.backspace_sends_bs)
-    term.backspace_sends_bs = new_cfg.backspace_sends_bs;
-  if (strcmp(new_cfg.term, cfg.term))
-    term.vt220_keys = strstr(new_cfg.term, "vt220");
+  term.backspace_sends_bs = cfg.backspace_sends_bs;
+  term.vt220_keys = strstr(cfg.term, "vt220");
 }
 
 static void

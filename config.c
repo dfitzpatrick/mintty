@@ -29,7 +29,8 @@ static string rc_filename = 0;
 #define DUMP(...) { }
 #endif
 
-const char *THEME_DIR = "/usr/share/mintty.d/themes";
+const char *THEME_DIR      = "/usr/share/mintty.d/themes";
+const char *MASTER_RC_FILE = "/usr/share/mintty.d/minttyrc";
 
 const config default_cfg = {
   // Looks
@@ -620,11 +621,12 @@ load_one_config(string filename, bool remember)
 
     Option *option_table = NULL;
     char line[256];
+    DUMP("==== load_one_config, file = %s ====\n", filename);
     while (fgets(line, sizeof line, file)) {
         line[strcspn(line, "\r\n")] = 0;  // trim newline
         Option *opt = parse_option2(line);
         if (opt) {
-            DUMP("Config '%s': Got %s = %s.\n", filename, opt->name, opt->value);
+            DUMP("    Loaded %s = %s\n", opt->name, opt->value);
             opt->remember = remember;
             Option *lookup;
             HASH_FIND_STR(option_table, opt->name, lookup);
@@ -687,9 +689,10 @@ load_config(string filename, bool remember)
     }
 
     Option *options = load_config_recursive(filename, remember);
+    DUMP("==== Configuration loaded from %s ====\n", filename);
 
     for (Option *i = options; i != NULL; i = i->hh.next) {
-        DUMP("%s = %s, remember = %i\n", i->name, i->value, i->remember);
+        DUMP("    %s = %s, remember = %i\n", i->name, i->value, i->remember);
         set_option(i->name, i->value);
         if (i->remember) {
             int idx = find_option(i->name);
@@ -700,16 +703,6 @@ load_config(string filename, bool remember)
     check_legacy_options(remember_file_option);
     copy_config(&file_cfg, &cfg);
 }
-
-void
-load_all_config()
-{
-    load_config("/usr/share/mintty.d/minttyrc", false);
-    string rc_file = asform("%s/.minttyrc", home);
-    load_config(rc_file, true);
-    delete(rc_file);
-}
-
 
 void
 copy_config(config *dst_p, const config *src_p)
@@ -832,6 +825,10 @@ static control *cols_box, *rows_box, *locale_box, *charset_box;
 static void
 apply_config(void)
 {
+  DUMP("==== apply_config() ====\n");
+  DUMP("    old_theme = %s\n", cfg.theme_file);
+  DUMP("    new_theme = %s\n", new_cfg.theme_file);
+
   // Record what's changed
   for (uint i = 0; i < lengthof(options); i++) {
     opt_type type = options[i].type;
@@ -844,15 +841,46 @@ apply_config(void)
         changed = strcmp(*(string *)val_p, *(string *)new_val_p);
       when OPT_INT or OPT_COLOUR:
         changed = (*(int *)val_p != *(int *)new_val_p);
+        DUMP("Changed[%d] = %d\n", i, changed);
       otherwise:
         changed = (*(char *)val_p != *(char *)new_val_p);
     }
     if (changed && !seen_arg_option(i))
       remember_file_option(i);
   }
-  
-  win_reconfig();
+
+  // DO NOT ALLOW newcfg to leak out of here.
+  // If theme changes then reload everything.
+  bool theme_changed = strcmp(cfg.theme_file, new_cfg.theme_file) != 0;
+  bool font_changed =
+    strcmp(new_cfg.font.name, cfg.font.name) ||
+    new_cfg.font.size != cfg.font.size ||
+    new_cfg.font.isbold != cfg.font.isbold ||
+    new_cfg.bold_as_font != cfg.bold_as_font ||
+    new_cfg.bold_as_colour != cfg.bold_as_colour ||
+    new_cfg.font_smoothing != cfg.font_smoothing ||
+    theme_changed; // just assume it did.
+
+  copy_config(&cfg, &new_cfg);
   save_config();
+
+  //if (theme_changed) {
+      // Reload. This is not a complete solution because there are options
+      // on the command line as well which we are ignoring. I cannot think of
+      // a way around this without rewriting the config system.
+      load_all_config();
+  //}
+
+  win_reconfig(font_changed);
+}
+
+void
+load_all_config()
+{
+    load_config(MASTER_RC_FILE, false);
+    string rc_file = asform("%s/.minttyrc", home);
+    load_config(rc_file, true);
+    delete(rc_file);
 }
 
 static void
@@ -869,13 +897,6 @@ cancel_handler(control *unused(ctrl), int event)
 {
   if (event == EVENT_ACTION)
     dlg_end();
-}
-
-static void
-apply_handler(control *unused(ctrl), int event)
-{
-  if (event == EVENT_ACTION)
-    apply_config();
 }
 
 static void
@@ -1053,11 +1074,9 @@ setup_config_box(controlbox * b)
   c->column = 0;
   c = ctrl_pushbutton(s, "OK", ok_handler, 0);
   c->button.isdefault = true;
-  c->column = 2;
+  c->column = 3;
   c = ctrl_pushbutton(s, "Cancel", cancel_handler, 0);
   c->button.iscancel = true;
-  c->column = 3;
-  c = ctrl_pushbutton(s, "Apply", apply_handler, 0);
   c->column = 4;
 
  /*

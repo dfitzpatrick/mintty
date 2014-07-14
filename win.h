@@ -3,7 +3,7 @@
 
 #include "term.h"
 
-void win_reconfig(void);
+void win_reconfig(bool font_changed);
 
 void win_update(void);
 void win_schedule_update(void);
