@@ -29,8 +29,8 @@ static string rc_filename = 0;
 #define DUMP(...) { }
 #endif
 
-const char *THEME_DIR      = "/usr/share/mintty.d/themes";
-const char *MASTER_RC_FILE = "/usr/share/mintty.d/minttyrc";
+const char *THEME_DIR      = "/usr/share/mintty/themes";
+const char *MASTER_RC_FILE = "/usr/share/mintty/minttyrc";
 
 const config default_cfg = {
   // Looks
@@ -451,13 +451,19 @@ is_whitespace(string option)
     return true;
 }
 
+static bool
+is_comment(string option)
+{
+    return option[0] == '#';
+}
+
 static int
 parse_option(string option)
 {
   // Don't issue a warning for blank lines, just ignore them.
-  if (is_whitespace(option))
+  if (is_whitespace(option) || is_comment(option))
       return -1;
-
+ 
   const char *eq = strchr(option, '=');
   if (!eq) {
     fprintf(stderr, "Ignoring malformed option '%s'.\n", option);
@@ -543,7 +549,7 @@ static Option *
 parse_option2(string line)
 {
     // Don't issue a warning for blank lines, just ignore them.
-    if (is_whitespace(line))
+    if (is_whitespace(line) || is_comment(line))
         return NULL;
 
     const char *eq = strchr(line, '=');
