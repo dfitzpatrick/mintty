@@ -486,6 +486,49 @@ parse_option(string option)
   return set_option(name, val);
 }
 
+static Option *
+parse_option2(string line)
+{
+    // Don't issue a warning for blank lines, just ignore them.
+    if (is_whitespace(line) || is_comment(line))
+        return NULL;
+
+    const char *eq = strchr(line, '=');
+    if (!eq) {
+        fprintf(stderr, "Ignoring malformed option '%s'.\n", line);
+        return NULL;
+    }
+
+    // Skip any leading whitespace.
+    while (isspace((uchar)*line))
+        line++;
+
+    // Grab the name.
+    const char *name_end = eq;
+    while (isspace((uchar)name_end[-1]))
+        name_end--;
+ 
+    Option *opt = new_option();
+    uint name_len = name_end - line;
+    opt->name = malloc(name_len + 1);
+    strncpy(opt->name, line, name_len);
+    opt->name[name_len] = 0;
+
+    // Grab the value, trimming any trailing whitespace.
+    const char *value_start = eq + 1;
+    while (isspace((uchar)*value_start))
+        value_start++;
+    const char *value_end = strchr(value_start, 0);
+    while (isspace((uchar)value_end[-1]))
+        value_end--;
+    uint value_len = value_end - value_start;
+    opt->value = malloc(value_len + 1);
+    strncpy(opt->value, value_start, value_len);
+    opt->value[value_len] = 0;
+
+    return opt;
+}
+
 static void
 check_arg_option(int i)
 {
@@ -543,49 +586,6 @@ free_option_hash(Option **hash_table)
         free_option(cur);
     }
     *hash_table = NULL;
-}
-
-static Option *
-parse_option2(string line)
-{
-    // Don't issue a warning for blank lines, just ignore them.
-    if (is_whitespace(line) || is_comment(line))
-        return NULL;
-
-    const char *eq = strchr(line, '=');
-    if (!eq) {
-        fprintf(stderr, "Ignoring malformed option '%s'.\n", line);
-        return NULL;
-    }
-
-    // Skip any leading whitespace.
-    while (isspace((uchar)*line))
-        line++;
-
-    // Grab the name.
-    const char *name_end = eq;
-    while (isspace((uchar)name_end[-1]))
-        name_end--;
- 
-    Option *opt = new_option();
-    uint name_len = name_end - line;
-    opt->name = malloc(name_len + 1);
-    strncpy(opt->name, line, name_len);
-    opt->name[name_len] = 0;
-
-    // Grab the value, trimming any trailing whitespace.
-    const char *value_start = eq + 1;
-    while (isspace((uchar)*value_start))
-        value_start++;
-    const char *value_end = strchr(value_start, 0);
-    while (isspace((uchar)value_end[-1]))
-        value_end--;
-    uint value_len = value_end - value_start;
-    opt->value = malloc(value_len + 1);
-    strncpy(opt->value, value_start, value_len);
-    opt->value[value_len] = 0;
-
-    return opt;
 }
 
 /*
