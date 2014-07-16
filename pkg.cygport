@@ -12,6 +12,7 @@ Features include:
 * Full Unicode support.
 * Native Windows user interface that tries to keep things simple.
 * Graphical options dialog. Options stored in a text file.
+* Themes.
 * Drag & drop and copy & paste of text, files and folders.
 * Extensive mouse support.
 * Window transparency."
@@ -29,4 +30,8 @@ src_install() {
   dobin mintty.exe
   doman docs/mintty.1
   dodoc COPYING LICENSE.Oxygen LICENSE.PuTTY
+
+  # This fails with *** ERROR: file themes/* does not exist 
+  insinto /usr/share/mintty/themes
+  doins themes/*
 }

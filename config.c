@@ -486,6 +486,29 @@ parse_option(string option)
   return set_option(name, val);
 }
 
+// Represents one option read from one line in the config file.
+typedef struct Option {
+   char *name;
+   char *value;
+   bool remember;
+   UT_hash_handle hh;
+} Option;
+
+static Option *
+new_option()
+{
+    Option *opt = calloc(1, sizeof(*opt));
+    return opt;
+}
+
+static void
+free_option(Option *opt)
+{
+    free(opt->name);
+    free(opt->value);
+    free(opt);
+}
+
 static Option *
 parse_option2(string line)
 {
@@ -548,29 +571,6 @@ void
 parse_arg_option(string option)
 {
   check_arg_option(parse_option(option));
-}
-
-// Represents one option read from one line in the config file.
-typedef struct Option {
-   char *name;
-   char *value;
-   bool remember;
-   UT_hash_handle hh;
-} Option;
-
-static Option *
-new_option()
-{
-    Option *opt = calloc(1, sizeof(*opt));
-    return opt;
-}
-
-static void
-free_option(Option *opt)
-{
-    free(opt->name);
-    free(opt->value);
-    free(opt);
 }
 
 /*

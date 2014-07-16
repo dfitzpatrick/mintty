@@ -1,7 +1,7 @@
 # Interesting make targets:
 # - exe: Just the executable. This is the default.
 # - src: Source tarball.
-# - pkg: Cygwin package.
+# - pkg: Cygwin package (invocation = "make RELEASE=1.3 pkg").
 # - zip: Zip for standalone release.
 # - pdf: PDF version of the manual page.
 # - clean: Delete generated files.

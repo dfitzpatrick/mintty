@@ -8,14 +8,14 @@
 
 #define APPNAME "mintty"
 #define APPDESC "Terminal"
-#define WEBSITE "http://mintty.googlecode.com"
-#define AUTHOR  "Andy Koppe"
-#define YEAR    "2013"
+#define WEBSITE "https://github.com/PhilipDaniels/mintty"
+#define AUTHOR  "Andy Koppe, Philip Daniels"
+#define YEAR    "2014"
 
 #define MAJOR_VERSION  1
-#define MINOR_VERSION  2
+#define MINOR_VERSION  3
 #define PATCH_NUMBER   0
-#define BUILD_NUMBER   1
+#define BUILD_NUMBER   0
 
 #if defined SVN_DIR && defined SVN_REV
   #undef BUILD_NUMBER
