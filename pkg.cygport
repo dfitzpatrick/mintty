@@ -32,6 +32,8 @@ src_install() {
   dodoc COPYING LICENSE.Oxygen LICENSE.PuTTY
 
   # This fails with *** ERROR: file themes/* does not exist 
+  # We appear to be in /c/Users/Phil/repos/mintty/mintty-1.3-alpha-1.3/build
+  # during this step.
   insinto /usr/share/mintty/themes
   doins themes/*
 }
