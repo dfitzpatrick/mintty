@@ -1,6 +1,9 @@
 ForegroundColour=131, 148, 150
 BackgroundColour=  0,  43,  54
-CursorColour=    220,  50,  47
+CursorColour    = 181,137,   0
+#CursorColour   = 38, 139, 210 blue not bad
+#CursorColour=    211,54,130   magenta not bad
+#CursorColour=   203,75,22     bold-red not bad, All others don't work
 
 Black=             7,  54,  66
 BoldBlack=         0,  43,  54
