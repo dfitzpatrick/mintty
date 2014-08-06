@@ -1,7 +1,7 @@
 CATEGORY="Base Shells"
 DEPEND="gcc-core"
 HOMEPAGE="https://github.com/PhilipDaniels/mintty"
-SRC_URI="https://github.com/PhilipDaniels/mintty/releases/mintty-${PV}-src.tar.bz2"
+SRC_URI="https://github.com/PhilipDaniels/mintty/releases/download/v1.3.0/mintty-${PV}-src.tar.bz2"
 SUMMARY="Terminal emulator with native Windows look and feel"
 DESCRIPTION="\
 Mintty is a terminal emulator for Cygwin. It is based on code

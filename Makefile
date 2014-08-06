@@ -15,6 +15,11 @@
 # The values of DEBUG and DMALLOC variables do not matter, it's just about
 # whether they're defined, so e.g. 'make DEBUG=1' will trigger a debug build.
 
+# To build a release do
+#   make clean && make && make RELEASE=1.0 pkg
+# The version number is held in the appinfo.h file.
+# PD: I don't understand why the naming scheme is as it is.
+
 NAME := mintty
 
 ifdef TARGET
