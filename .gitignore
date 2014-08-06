@@ -4,6 +4,9 @@
 TAGS
 pd.txt
 *.stackdump
+
+# These are artifacts of the cygport packaging step.
 mintty-*src.tar.bz2
 mintty-*.cygport
+mintty-*/
 
