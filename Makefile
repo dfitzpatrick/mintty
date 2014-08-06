@@ -57,6 +57,7 @@ name_ver := $(NAME)-$(version)
 
 src_files := $(wildcard Makefile *.c *.h *.rc *.mft COPYING LICENSE* INSTALL)
 src_files += $(wildcard docs/$(NAME).1 docs/readme*.html scripts/* icon/*)
+src_files += $(wildcard themes/*)
 
 c_srcs := $(wildcard *.c)
 rc_srcs := $(wildcard *.rc)

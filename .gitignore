@@ -4,4 +4,6 @@
 TAGS
 pd.txt
 *.stackdump
+mintty-*src.tar.bz2
+mintty-*.cygport
 
