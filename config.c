@@ -671,7 +671,7 @@ parse_option(string option)
 
   if (strcasecmp(name, "ThemeFile") == 0) 
   {
-    fprintf(stderr, "Loading theme...");
+    DUMP("Loading theme...");
     string fname = asform("%s/%s", THEME_DIR, val);
     Option *theme_config = load_config_recursive(fname, false);
     if (theme_config)
