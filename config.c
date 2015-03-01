@@ -457,35 +457,6 @@ is_comment(string option)
     return option[0] == '#';
 }
 
-static int
-parse_option(string option)
-{
-  // Don't issue a warning for blank lines, just ignore them.
-  if (is_whitespace(option) || is_comment(option))
-      return -1;
- 
-  const char *eq = strchr(option, '=');
-  if (!eq) {
-    fprintf(stderr, "Ignoring malformed option '%s'.\n", option);
-    return -1;
-  }
-  
-  const char *name_end = eq;
-  while (isspace((uchar)name_end[-1]))
-    name_end--;
-  
-  uint name_len = name_end - option;
-  char name[name_len + 1];
-  memcpy(name, option, name_len);
-  name[name_len] = 0;
-  
-  const char *val = eq + 1;
-  while (isspace((uchar)*val))
-    val++;
-  
-  return set_option(name, val);
-}
-
 // Represents one option read from one line in the config file.
 typedef struct Option {
    char *name;
@@ -550,27 +521,6 @@ parse_option2(string line)
     opt->value[value_len] = 0;
 
     return opt;
-}
-
-static void
-check_arg_option(int i)
-{
-  if (i >= 0) {
-    remember_arg_option(i);
-    check_legacy_options(remember_arg_option);
-  }
-}
-
-void
-set_arg_option(string name, string val)
-{
-  check_arg_option(set_option(name, val));
-}
-
-void
-parse_arg_option(string option)
-{
-  check_arg_option(parse_option(option));
 }
 
 /*
@@ -681,6 +631,85 @@ load_config_recursive(string filename, bool remember)
 }
 
 void
+apply_options(Option *options)
+{
+    for (Option *i = options; i != NULL; i = i->hh.next) {
+        DUMP("    %s = %s, remember = %i\n", i->name, i->value, i->remember);
+        set_option(i->name, i->value);
+        if (i->remember) {
+            int idx = find_option(i->name);
+            remember_file_option(idx);
+        }
+    }
+}
+
+static int
+parse_option(string option)
+{
+  // Don't issue a warning for blank lines, just ignore them.
+  if (is_whitespace(option) || is_comment(option))
+      return -1;
+ 
+  const char *eq = strchr(option, '=');
+  if (!eq) {
+    fprintf(stderr, "Ignoring malformed option '%s'.\n", option);
+    return -1;
+  }
+  
+  const char *name_end = eq;
+  while (isspace((uchar)name_end[-1]))
+    name_end--;
+  
+  uint name_len = name_end - option;
+  char name[name_len + 1];
+  memcpy(name, option, name_len);
+  name[name_len] = 0;
+  
+  const char *val = eq + 1;
+  while (isspace((uchar)*val))
+    val++;
+
+  if (strcasecmp(name, "ThemeFile") == 0) 
+  {
+    fprintf(stderr, "Loading theme...");
+    string fname = asform("%s/%s", THEME_DIR, val);
+    Option *theme_config = load_config_recursive(fname, false);
+    if (theme_config)
+    {
+      apply_options(theme_config);
+      free_option(theme_config);
+    }
+    delete(fname);
+    return -1;
+  }
+  else
+  {
+    return set_option(name, val);
+  }
+}
+
+static void
+check_arg_option(int i)
+{
+  if (i >= 0) {
+    remember_arg_option(i);
+    check_legacy_options(remember_arg_option);
+  }
+}
+
+void
+set_arg_option(string name, string val)
+{
+  check_arg_option(set_option(name, val));
+}
+
+void
+parse_arg_option(string option)
+{
+  check_arg_option(parse_option(option));
+}
+
+void
 load_config(string filename, bool remember)
 {
     if (remember) {
@@ -696,15 +725,7 @@ load_config(string filename, bool remember)
 
     Option *options = load_config_recursive(filename, remember);
     DUMP("==== Configuration loaded from %s ====\n", filename);
-
-    for (Option *i = options; i != NULL; i = i->hh.next) {
-        DUMP("    %s = %s, remember = %i\n", i->name, i->value, i->remember);
-        set_option(i->name, i->value);
-        if (i->remember) {
-            int idx = find_option(i->name);
-            remember_file_option(idx);
-        }
-    }
+    apply_options(options);
     free_option_hash(&options);
     check_legacy_options(remember_file_option);
     copy_config(&file_cfg, &cfg);
