@@ -143,4 +143,4 @@ TAGS: *.c *.h
 	etags --fields=+l *.c *.h
 
 color: color.h color.c
-	gcc color.c -o color.exe
+	gcc $(CFLAGS) color.c -o color.exe
