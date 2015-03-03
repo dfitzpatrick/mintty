@@ -33,21 +33,29 @@
 #define COL_DIM_COLOR                   (1 << 10)
 #define COL_RGB_COLOR                   (1 << 24)
 
-#define COL_GET_RED(color)              (((color) >> 16) & 0xFF)
-#define COL_GET_GREEN(color)            (((color) >> 8) & 0xFF)
-#define COL_GET_BLUE(color)             ((color) & 0xFF)
-uint col_make_from_rgb(uint red, uint green, uint blue);
+// Signed so that -1 can indicate "no colour".
+typedef unsigned char uchar;
+typedef int colour;
+
+static inline uchar col_get_red(colour c) { return (c >> 16) & 0xFF; }
+static inline uchar col_get_green(colour c) { return (c >> 8) & 0xFF; }
+static inline uchar col_get_blue(colour c) { return c & 0xFF; }
+
+static inline void col_set_red(colour *c, uchar red) { *c = (*c & ~0xFF0000) | (red & 0xFF0000); }
+static inline void col_set_green(colour *c, uchar green) { *c = (*c & ~0xFF00) | (green & 0xFF00); }
+static inline void col_set_blue(colour *c, uchar blue) { *c = (*c & ~0xFF) | (blue & 0xFF); }
+
+static inline colour col_from_rgb(uchar red, uchar green, uchar blue) { return red << 16 | green << 8 | blue; }
+static inline colour col_make_dim(colour c)
+{
+    colour dimRed = ((colour)col_get_red(c)) * 2 / 3;
+    colour uchar dimGreen = ((colour)col_get_green(c)) * 2 / 3;
+    colour uchar dimBlue = ((colour)col_get_blue(c)) * 2 / 3;
+    return col_from_rgb(dimRed, dimGreen, dimBlue);
+}
+
 void col_set_palette_entry(uint palette_index, uint colour);
 uint col_get_palette_entry(uint palette_index);
-
-
-typedef uint colour;
-enum { DEFAULT_COLOUR = UINT_MAX };
-static inline colour make_colour(uchar r, uchar g, uchar b) { return r | g << 8 | b << 16; }
-bool parse_colour(string, colour *);
-static inline uchar red(colour c) { return c; }
-static inline uchar green(colour c) { return c >> 8; }
-static inline uchar blue(colour c) { return c >> 16; }
 
 
 #endif
