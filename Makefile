@@ -138,3 +138,9 @@ clean:
 	$(RC) --preprocessor '$(CC) -E -xc -DRC_INVOKED -MMD -MP $(CPPFLAGS)' $< $*.o
 
 -include $(wildcard *.d)
+
+TAGS: *.c *.h
+	etags --fields=+l *.c *.h
+
+color: color.h color.c
+	gcc color.c -o color.exe
